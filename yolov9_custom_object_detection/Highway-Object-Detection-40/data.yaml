@@ -1,0 +1,16 @@
+names:
+- bus
+- car
+- motorbike
+- person
+- truck
+nc: 5
+roboflow:
+  license: CC BY 4.0
+  project: highway-object-detection
+  url: https://universe.roboflow.com/universitas-tidar/highway-object-detection/dataset/40
+  version: 40
+  workspace: universitas-tidar
+test: ../test/images
+train: Highway-Object-Detection-40/train/images
+val: Highway-Object-Detection-40/valid/images
