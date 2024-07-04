@@ -296,16 +296,13 @@ def detect(opt):
             # Stream results
             im0 = annotator.result()
             height, width, channels = im0.shape
-            print(height, width)
             im0 = cv2.resize(im0, (640, 480))
             if show_vid:
-                #cv2.imshow(p, im0)
                 cv2.imshow("result", im0)
                 height, width, channels = im0.shape
                 _stride = channels * width
                 gstBuffer = Gst.Buffer.new_allocate(None, height * _stride, None)
                 gstBuffer.fill(0,im0.tobytes())
-
                 src.emit("push-buffer", gstBuffer)
 
                 if cv2.waitKey(1) == ord('q'):  # q to quit
