@@ -44,6 +44,18 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
+import gi
+
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst, GObject, GLib
+Gst.init(None)
+
+# used to record the time when we processed last frame 
+prev_frame_time = 0
+  
+# used to record the time at which we processed current frame 
+new_frame_time = 0
+
 
 def detect(opt):
     out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, imgsz, evaluate, half, project, name, exist_ok= \
@@ -51,6 +63,21 @@ def detect(opt):
         opt.save_txt, opt.imgsz, opt.evaluate, opt.half, opt.project, opt.name, opt.exist_ok
     webcam = source == '0' or source.startswith(
         'rtsp') or source.startswith('http') or source.endswith('.txt')
+
+    # create gstreamer pipeline
+    pipeline_str = (
+        "appsrc name=source ! "
+        "video/x-raw,format=BGR,width=640,height=480,framerate=30/1 !"
+        "videoconvert !"
+        "video/x-raw,format=I420,width=640,height=480,framerate=30/1 !"
+        "videoconvert !"
+        "shmsink socket-path=/tmp/shmvideo shm-size=2000000"
+    )
+    pipeline = Gst.parse_launch(pipeline_str)
+    src = pipeline.get_by_name("source")
+    # source_caps = Gst.Caps.from_string("video/x-raw,format=I420,width=640,height=480,framerate=30/1")
+    # src.set_property("caps", source_caps)
+    pipeline.set_state(Gst.State.PLAYING)
 
     # initialize deepsort
     cfg = get_config()
@@ -268,9 +295,19 @@ def detect(opt):
 
             # Stream results
             im0 = annotator.result()
+            height, width, channels = im0.shape
+            print(height, width)
+            im0 = cv2.resize(im0, (640, 480))
             if show_vid:
                 #cv2.imshow(p, im0)
                 cv2.imshow("result", im0)
+                height, width, channels = im0.shape
+                _stride = channels * width
+                gstBuffer = Gst.Buffer.new_allocate(None, height * _stride, None)
+                gstBuffer.fill(0,im0.tobytes())
+
+                src.emit("push-buffer", gstBuffer)
+
                 if cv2.waitKey(1) == ord('q'):  # q to quit
                     raise StopIteration
 
